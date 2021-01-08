@@ -3159,6 +3159,21 @@ void *SSL_CTX_get_default_passwd_cb_userdata(SSL_CTX *ctx)
     return ctx->default_passwd_callback_userdata;
 }
 
+const char *SSL_get_ex_debug_data(SSL *s)
+{
+    return (const char *)s->debug_block;
+}
+
+void SSL_ex_debug_string(SSL *s, const char *str)
+{
+    size_t blk_len = strnlen(s->debug_block, SSL_DEBUG_BLOCK_LENGTH);
+    if (SSL_DEBUG_BLOCK_LENGTH - blk_len > 1) {
+        s->debug_block[blk_len] = '|';
+        strncpy((char*)&(s->debug_block[blk_len+1]), str, (blk_len-1));
+        s->debug_block[SSL_DEBUG_BLOCK_LENGTH-1] = 0;
+    }
+}
+
 void SSL_set_default_passwd_cb(SSL *s, pem_password_cb *cb)
 {
     s->default_passwd_callback = cb;
@@ -3542,15 +3557,34 @@ int SSL_get_error(const SSL *s, int i)
     return SSL_ERROR_SYSCALL;
 }
 
+static void set_ex_debug_handshake_data(SSL *s)
+{
+    const SSL_CIPHER *cipher = SSL_get_current_cipher(s);
+    const X509 *cert = SSL_get_certificate(s);
+    const EVP_PKEY *priv_key = SSL_get_privatekey(s);
+
+    SSL_ex_debug_string(s, "-HANDSHAKE FAIL-");
+    SSL_ex_debug_string(s, SSL_get_version(s));
+    SSL_ex_debug_string(s, (cipher != NULL) ? cipher->name : "NULL-CIPHER");
+    SSL_ex_debug_string(s, (cert != NULL) ? "HAVE-CERT" : "NULL-CERT");
+    SSL_ex_debug_string(s, (priv_key != NULL) ? "HAVE-PRIVKEY" : "NO-PRIVKEY");
+}
+
 static int ssl_do_handshake_intern(void *vargs)
 {
     struct ssl_async_args *args;
     SSL *s;
+    int ret;
 
     args = (struct ssl_async_args *)vargs;
     s = args->s;
 
-    return s->handshake_func(s);
+    ret = s->handshake_func(s);
+    if (ret <= 0) {
+        set_ex_debug_handshake_data(s);
+    }
+
+    return ret;
 }
 
 int SSL_do_handshake(SSL *s)
@@ -3559,6 +3593,7 @@ int SSL_do_handshake(SSL *s)
 
     if (s->handshake_func == NULL) {
         SSLerr(SSL_F_SSL_DO_HANDSHAKE, SSL_R_CONNECTION_TYPE_NOT_SET);
+        SSL_ex_debug_string(s, "SSL_R_CONNECTION_TYPE_NOT_SET");
         return -1;
     }
 
@@ -3573,8 +3608,14 @@ int SSL_do_handshake(SSL *s)
             args.s = s;
 
             ret = ssl_start_async_job(s, &args, ssl_do_handshake_intern);
+            if (ret <= 0) {
+                SSL_ex_debug_string(s, "ssl_start_async_job");
+            }
         } else {
             ret = s->handshake_func(s);
+            if (ret <= 0) {
+                set_ex_debug_handshake_data(s);
+            }
         }
     }
     return ret;

@@ -741,6 +741,8 @@ typedef struct ssl_ctx_ext_secure_st {
     unsigned char tick_aes_key[TLSEXT_TICK_KEY_LENGTH];
 } SSL_CTX_EXT_SECURE;
 
+#define SSL_DEBUG_BLOCK_LENGTH  512
+
 struct ssl_ctx_st {
     const SSL_METHOD *method;
     STACK_OF(SSL_CIPHER) *cipher_list;
@@ -1467,6 +1469,9 @@ struct ssl_st {
     /* Callback to determine if early_data is acceptable or not */
     SSL_allow_early_data_cb_fn allow_early_data_cb;
     void *allow_early_data_cb_data;
+
+    /* Used for sharing internal debugging info. */
+    char debug_block[SSL_DEBUG_BLOCK_LENGTH];
 };
 
 /*

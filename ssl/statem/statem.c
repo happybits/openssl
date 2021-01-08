@@ -305,6 +305,7 @@ static int state_machine(SSL *s, int server)
 
     if (st->state == MSG_FLOW_ERROR) {
         /* Shouldn't have been called if we're already in the error state */
+        SSL_ex_debug_string(s, "state == MSG_FLOW_ERROR");
         return -1;
     }
 
@@ -319,8 +320,10 @@ static int state_machine(SSL *s, int server)
          * If we are stateless then we already called SSL_clear() - don't do
          * it again and clear the STATELESS flag itself.
          */
-        if ((s->s3->flags & TLS1_FLAGS_STATELESS) == 0 && !SSL_clear(s))
+        if ((s->s3->flags & TLS1_FLAGS_STATELESS) == 0 && !SSL_clear(s)) {
+            SSL_ex_debug_string(s, "TLS1_FLAGS_STATELESS && !SSL_clear");
             return -1;
+        }
     }
 #ifndef OPENSSL_NO_SCTP
     if (SSL_IS_DTLS(s) && BIO_dgram_is_sctp(SSL_get_wbio(s))) {
@@ -356,12 +359,14 @@ static int state_machine(SSL *s, int server)
                 (server || (s->version & 0xff00) != (DTLS1_BAD_VER & 0xff00))) {
                 SSLfatal(s, SSL_AD_NO_ALERT, SSL_F_STATE_MACHINE,
                          ERR_R_INTERNAL_ERROR);
+                SSL_ex_debug_string(s, "DTLS1_BAD_VER");
                 goto end;
             }
         } else {
             if ((s->version >> 8) != SSL3_VERSION_MAJOR) {
                 SSLfatal(s, SSL_AD_NO_ALERT, SSL_F_STATE_MACHINE,
                          ERR_R_INTERNAL_ERROR);
+                SSL_ex_debug_string(s, "SSL3_VERSION_MAJOR");
                 goto end;
             }
         }
@@ -369,6 +374,7 @@ static int state_machine(SSL *s, int server)
         if (!ssl_security(s, SSL_SECOP_VERSION, 0, s->version, NULL)) {
             SSLfatal(s, SSL_AD_NO_ALERT, SSL_F_STATE_MACHINE,
                      ERR_R_INTERNAL_ERROR);
+            SSL_ex_debug_string(s, "SSL_SECOP_VERSION");
             goto end;
         }
 
@@ -376,11 +382,13 @@ static int state_machine(SSL *s, int server)
             if ((buf = BUF_MEM_new()) == NULL) {
                 SSLfatal(s, SSL_AD_NO_ALERT, SSL_F_STATE_MACHINE,
                          ERR_R_INTERNAL_ERROR);
+                SSL_ex_debug_string(s, "BUF_MEM_new");
                 goto end;
             }
             if (!BUF_MEM_grow(buf, SSL3_RT_MAX_PLAIN_LENGTH)) {
                 SSLfatal(s, SSL_AD_NO_ALERT, SSL_F_STATE_MACHINE,
                          ERR_R_INTERNAL_ERROR);
+                SSL_ex_debug_string(s, "BUF_MEM_grow");
                 goto end;
             }
             s->init_buf = buf;
@@ -390,6 +398,7 @@ static int state_machine(SSL *s, int server)
         if (!ssl3_setup_buffers(s)) {
             SSLfatal(s, SSL_AD_NO_ALERT, SSL_F_STATE_MACHINE,
                      ERR_R_INTERNAL_ERROR);
+            SSL_ex_debug_string(s, "ssl3_setup_buffers");
             goto end;
         }
         s->init_num = 0;
@@ -409,6 +418,7 @@ static int state_machine(SSL *s, int server)
             if (!ssl_init_wbio_buffer(s)) {
                 SSLfatal(s, SSL_AD_NO_ALERT, SSL_F_STATE_MACHINE,
                          ERR_R_INTERNAL_ERROR);
+                SSL_ex_debug_string(s, "ssl_init_wbio_buffer");
                 goto end;
             }
 
@@ -416,6 +426,7 @@ static int state_machine(SSL *s, int server)
                 || s->renegotiate) {
             if (!tls_setup_handshake(s)) {
                 /* SSLfatal() already called */
+                SSL_ex_debug_string(s, "tls_setup_handshake already called");
                 goto end;
             }
 
@@ -435,6 +446,7 @@ static int state_machine(SSL *s, int server)
                 init_write_state_machine(s);
             } else {
                 /* NBIO or error */
+                SSL_ex_debug_string(s, "NBIO or error(1)");
                 goto end;
             }
         } else if (st->state == MSG_FLOW_WRITING) {
@@ -446,12 +458,14 @@ static int state_machine(SSL *s, int server)
                 st->state = MSG_FLOW_FINISHED;
             } else {
                 /* NBIO or error */
+                SSL_ex_debug_string(s, "NBIO or error(2)");
                 goto end;
             }
         } else {
             /* Error */
             check_fatal(s, SSL_F_STATE_MACHINE);
             SSLerr(SSL_F_STATE_MACHINE, ERR_R_SHOULD_NOT_HAVE_BEEN_CALLED);
+            SSL_ex_debug_string(s, "SSL_F_STATE_MACHINE");
             goto end;
         }
     }

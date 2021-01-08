@@ -1801,6 +1801,7 @@ int SSL_client_hello_get0_ext(SSL *s, unsigned int type,
                               const unsigned char **out, size_t *outlen);
 
 void SSL_certs_clear(SSL *s);
+const char *SSL_get_ex_debug_data(SSL *s);
 void SSL_free(SSL *ssl);
 # ifdef OSSL_ASYNC_FD
 /*
