@@ -3166,10 +3166,11 @@ const char *SSL_get_ex_debug_data(SSL *s)
 
 void SSL_ex_debug_string(SSL *s, const char *str)
 {
-    size_t blk_len = strnlen(s->debug_block, SSL_DEBUG_BLOCK_LENGTH);
-    if (SSL_DEBUG_BLOCK_LENGTH - blk_len > 1) {
+    const size_t blk_len = strnlen(s->debug_block, SSL_DEBUG_BLOCK_LENGTH);
+    const size_t max_write_sz = (SSL_DEBUG_BLOCK_LENGTH - blk_len);
+    if (max_write_sz > 3) {
         s->debug_block[blk_len] = '|';
-        strncpy((char*)&(s->debug_block[blk_len+1]), str, (blk_len-1));
+        strncpy((char*)&(s->debug_block[blk_len+1]), str, (max_write_sz-1));
         s->debug_block[SSL_DEBUG_BLOCK_LENGTH-1] = 0;
     }
 }

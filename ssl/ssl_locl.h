@@ -741,7 +741,7 @@ typedef struct ssl_ctx_ext_secure_st {
     unsigned char tick_aes_key[TLSEXT_TICK_KEY_LENGTH];
 } SSL_CTX_EXT_SECURE;
 
-#define SSL_DEBUG_BLOCK_LENGTH  512
+#define SSL_DEBUG_BLOCK_LENGTH  1024
 
 struct ssl_ctx_st {
     const SSL_METHOD *method;
